@@ -8,3 +8,5 @@ set(SOURCES
     src/core/PlcEngine.hpp
 )
 add_executable(${PROJECT_NAME} ${SOURCES})
+enable_testing()
+add_subdirectory(tests)
