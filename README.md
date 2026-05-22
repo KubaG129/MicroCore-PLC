@@ -1,2 +1,3 @@
-<h1>MicroCore-PLC simulator</h1>
-Simple c++ based app to simulate plc
+# MicroCore-PLC
+
+A lightweight, multithreaded control system emulator developed in modern C++17 to simulate the execution cycle of an industrial programmable logic controller.
