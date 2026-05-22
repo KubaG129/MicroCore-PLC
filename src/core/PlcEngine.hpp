@@ -4,7 +4,9 @@
 #include <chrono>
 #include <atomic>
 #include <iostream>
-
+#include <sstream>
+#include <string>
+#include <fstream>
 
 enum class PlcState {
 	STOP,
@@ -21,29 +23,60 @@ private:
 
 	const std::chrono::milliseconds cycleTime{ 10 }; // 1 cycle
 
+	std::ifstream telemetryFile;
+
 	void runEngine() {
 		auto nextCycle = std::chrono::steady_clock::now();
+		std::string line;
+
+		if (telemetryFile.is_open()) {
+			std::getline(telemetryFile, line);
+		}
 
 		while (isRunning) {
 			nextCycle += cycleTime;
 			if (currentState == PlcState::RUN) {
+				readInputsFromCsv();
 				executeLogic();
 			}
 
 			std::this_thread::sleep_until(nextCycle);
 		}
 	}
+	void readInputsFromCsv() {
+		if (!telemetryFile.is_open() || telemetryFile.eof()) {
+			std::cout << "[PLC] End of csv data" << std::endl;
+			currentState = PlcState::STOP;
+			isRunning = false;
+			return;
+		}
+		std::string line;
+		if (std::getline(telemetryFile, line)) {
+			std::stringstream ss(line);
+			std::string stepStr, tempStr;
+
+			if (std::getline(ss, stepStr, ';') && std::getline(ss, tempStr, ';')) {				
+				try {
+					float currentTemp = std::stof(tempStr);
+					memory.setAnalog("AI_Temperature", currentTemp);
+				}
+				catch (const std::exception& e) {
+
+				}
+				
+				
+
+			}
+		}
+	}
 	void executeLogic() {
 		try {
-			if (memory.getDigital("I_StartButton")) {
-				float currentTemp = memory.getAnalog("AI_Temperature");
+			float currentTemp = memory.getAnalog("AI_Temperature");
 
-				memory.setAnalog("AI_Temperature", currentTemp + 0.1f);
-
-				if (memory.getAnalog("AI_Temperature") > 30.0f) {
-					std::cout << "[PLC ERROR] Temperature over the limit" << std::endl;
-					currentState = PlcState::FAULT;
-				}
+			if (currentTemp > 30.0f) {
+				std::cout << "[PLC ALARM] Temperature is to high!" << currentTemp << " C. DEVICE IS STOPPING" << std::endl;
+				currentState = PlcState::FAULT;
+				isRunning = false;
 			}
 		}
 		catch (const::std::exception& e) {
@@ -52,10 +85,20 @@ private:
 		}
 	}
 public:
-	PlcEngine(MemoryMap& mem)
-		: memory(mem), currentState(PlcState::STOP), isRunning(false){}
+	PlcEngine(MemoryMap& mem, const std::string& csvPath)
+		: memory(mem), currentState(PlcState::STOP), isRunning(false){
+		telemetryFile.open(csvPath);
+		if (!telemetryFile.is_open()) {
+			std::cout << "[PLC ERROR] Can't open file:  " << csvPath << std::endl;
+			currentState = PlcState::FAULT;
+		}
+		
+	}
 	~PlcEngine() {
 		stop();
+		if (telemetryFile.is_open()) {
+			telemetryFile.close();
+		}
 	}
 	void start() {
 		if (isRunning) return;
@@ -66,13 +109,15 @@ public:
 		std::cout << "[PLC] PLC is running" << std::endl;
 	}
 	void stop() {
-		if (!isRunning) return;
-
 		isRunning = false;
-		currentState = PlcState::STOP;
 		if (workerThread.joinable()) {
 			workerThread.join();
+			std::cout << "[PLC] PLC thread joined successfully." << std::endl;
 		}
+		if (currentState != PlcState::FAULT) {
+			currentState = PlcState::STOP;
+		}
+
 		std::cout << "[PLC] PLC Stopped" << std::endl;
 	}
 

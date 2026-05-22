@@ -9,22 +9,33 @@ int main() {
 	MemoryMap plcMemory;
 	plcMemory.setDigital("I_StartButton", true);
 	plcMemory.setAnalog("AI_Temperature", 23.5f);
+	std::string csvPath = "C:/Users/kubag/Desktop/MicroCore-PLC/telemtry.csv";
+	try {
+		PlcEngine engine(plcMemory, csvPath);
+		if (engine.getState() == PlcState::FAULT) {
+			std::cout << "[HMI ERROR] Init error";
+			return 1;
+		}
+		engine.start();
 
-	PlcEngine engine(plcMemory);
-
-	engine.start();
-
-	for (int i = 0; i < 5; i++) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(250));
-		std::cout << "[HMI Alert] Current temperature: " <<
-			plcMemory.getAnalog("AI_Temperature") << " C" << std::endl;
+		while (engine.getState() == PlcState::RUN) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			std::cout << "[HMI Podglad] Current value: "
+				<< plcMemory.getAnalog("AI_Temperature") << " C" << std::endl;
+		}
 
 		if (engine.getState() == PlcState::FAULT) {
-			std::cout << "[HMI Alert] Error state!" << std::endl;
-			break;
+			std::cout << "[HMI]SYSTEM HALTED." << std::endl;
 		}
-	}
+		else {
+			std::cout << "[HMI] No errors." << std::endl;
+		}
 
-	engine.stop();
+		engine.stop();
+	}
+	catch (const std::exception& e) {
+		std::cerr << "[CRITICAL ERROR] Fatal aplication crash: " << e.what() << std::endl;
+		return 1;
+	}
 	return 0;
 }

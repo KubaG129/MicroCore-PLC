@@ -1,0 +1,30 @@
+name: Modern C++ CI Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up CMake
+      uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: '3.15'
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build Application and Tests
+      run: cmake --build ${{github.workspace}}/build --config Release
+
+    - name: Run Unit Tests
+      working-directory: ${{github.workspace}}/build/tests
+      run: .\Release\PlcTests.exe
