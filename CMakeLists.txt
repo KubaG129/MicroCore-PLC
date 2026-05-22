@@ -5,5 +5,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(src)
 set(SOURCES
     src/main.cpp
+    src/core/PlcEngine.hpp
 )
 add_executable(${PROJECT_NAME} ${SOURCES})
