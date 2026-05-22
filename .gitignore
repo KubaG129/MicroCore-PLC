@@ -1,0 +1,12 @@
+# Pliki tymczasowe Visual Studio
+.vs/
+CalculatedValues.txt
+
+# Foldery budowania CMake (tu l¹duj¹ pliki .exe i .obj)
+/out/
+/build/
+
+# Logi i pliki u¿ytkownika
+*.log
+*.user
+*.suo
